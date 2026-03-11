@@ -224,6 +224,7 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="180"/>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="180"/>
                 </Grid.ColumnDefinitions>
 
                 <Button Command="{Binding ResetAppCommand}"
@@ -242,6 +243,15 @@
                         Foreground="White"
                         FontWeight="Bold"
                         FontSize="20"/>
+
+                <Button Grid.Column="2"
+                        Content="🌍 Übersetzen"
+                        Margin="15,0,0,0"
+                        Height="50"
+                        Background="#2A2A2A"
+                        Foreground="White"
+                        FontWeight="Bold"
+                        Click="TranslateButton_Click"/>
             </Grid>
 
             <!-- Ergebnis -->

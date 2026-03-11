@@ -74,6 +74,14 @@ namespace FairRecruitingEngine.ViewModels
                 _activeColor = (SolidColorBrush)brushConverter.ConvertFromString("#FF7043")!
             });
 
+            Models.Add(new AiModelInfo
+            {
+                Tag = "llama3:8b",
+                Name = "Llama 3 (8B) – Effizienz-Modus",
+                Description = "Optimiert für geringere Systemressourcen (< 16 GB RAM)",
+                _activeColor = (SolidColorBrush)brushConverter.ConvertFromString("#FF7043")!
+            });
+
             Task.Run(CheckInstalledModels);
         }
 
