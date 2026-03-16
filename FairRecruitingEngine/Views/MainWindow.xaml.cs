@@ -1,10 +1,10 @@
 ﻿using FairRecruitingEngine.ViewModels;
-using System.Windows;
-using System.Windows.Input;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Threading;
 
 namespace FairRecruitingEngine.Views
@@ -21,8 +21,11 @@ namespace FairRecruitingEngine.Views
             "Română"
         };
 
+        private string currentLanguage = "Deutsch";
+
         private int progress = 0;
-        private DispatcherTimer progressTimer;
+        private DispatcherTimer? progressTimer;
+
         private string BuildProgressBar(int percent, string lang)
         {
             int totalBlocks = 14;
@@ -51,6 +54,21 @@ namespace FairRecruitingEngine.Views
             };
         }
 
+        // Sprachwahl aus der ComboBox
+        private void LanguageSelector_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (LanguageSelector.Items.Count > 0)
+                LanguageSelector.SelectedIndex = 0;
+        }
+
+        private void LanguageSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (LanguageSelector.SelectedItem is ComboBoxItem item)
+            {
+                currentLanguage = item.Content.ToString();
+            }
+        }
+
         private void TranslateButton_Click(object sender, RoutedEventArgs e)
         {
             var menu = new ContextMenu();
@@ -64,7 +82,6 @@ namespace FairRecruitingEngine.Views
                 {
                     var vm = (MainViewModel)DataContext;
 
-                    // ORIGINAL ANALYSE SPEICHERN
                     string analysisText = vm.StatusMessage;
 
                     progress = 0;
@@ -85,8 +102,8 @@ namespace FairRecruitingEngine.Views
 
                     progressTimer.Start();
 
-                    // WICHTIG: HIER analysisText verwenden
-                    string prompt = $"Translate the following text into {lang}. Return only the translated text.\n\n{analysisText}";
+                    string prompt =
+                        $"Translate the following text into {lang}. Return only the translated text.\n\n{analysisText}";
 
                     var client = new HttpClient();
 
@@ -103,10 +120,19 @@ namespace FairRecruitingEngine.Views
                     var response = await client.PostAsync("http://localhost:11434/api/generate", content);
                     var responseString = await response.Content.ReadAsStringAsync();
 
-                    progressTimer.Stop();
+                    progressTimer?.Stop();
 
-                    var doc = JsonDocument.Parse(responseString);
-                    string result = doc.RootElement.GetProperty("response").GetString();
+                    using var doc = JsonDocument.Parse(responseString);
+
+                    // Sicher prüfen, ob das Property existiert und der String nicht null ist.
+                    string? maybeResult = null;
+                    if (doc.RootElement.TryGetProperty("response", out var respElem))
+                    {
+                        maybeResult = respElem.GetString();
+                    }
+
+                    // Fallback, falls null
+                    string result = maybeResult ?? "Keine Antwort vom Übersetzungsdienst erhalten.";
 
                     vm.StatusMessage = $"Übersetzung abgeschlossen ✔\n\n{result}";
                 };

@@ -7,11 +7,11 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using UglyToad.PdfPig;
-
 
 namespace FairRecruitingEngine.ViewModels
 {
@@ -22,15 +22,30 @@ namespace FairRecruitingEngine.ViewModels
         public string Description { get; set; } = "";
         public string RamInfo { get; set; } = "";
         public bool CanSeeImages { get; set; } = false;
+
         public SolidColorBrush _activeColor = Brushes.White;
         private SolidColorBrush _displayColor = Brushes.Gray;
-        public SolidColorBrush DisplayColor { get => _displayColor; set => SetProperty(ref _displayColor, value); }
+
+        public SolidColorBrush DisplayColor
+        {
+            get => _displayColor;
+            set => SetProperty(ref _displayColor, value);
+        }
+
         private bool _isInstalled;
+
         public bool IsInstalled
         {
             get => _isInstalled;
-            set { SetProperty(ref _isInstalled, value); OnPropertyChanged(nameof(StatusIcon)); OnPropertyChanged(nameof(StatusColor)); DisplayColor = value ? _activeColor : Brushes.Gray; }
+            set
+            {
+                SetProperty(ref _isInstalled, value);
+                OnPropertyChanged(nameof(StatusIcon));
+                OnPropertyChanged(nameof(StatusColor));
+                DisplayColor = value ? _activeColor : Brushes.Gray;
+            }
         }
+
         public string StatusIcon => IsInstalled ? "✓" : "✕";
         public SolidColorBrush StatusColor => IsInstalled ? Brushes.SpringGreen : Brushes.Red;
     }
@@ -39,24 +54,28 @@ namespace FairRecruitingEngine.ViewModels
     {
         private readonly OllamaService _ollamaService = new();
         private readonly OcrService _ocrService;
-        private const string WelcomeText = "👋 BEREIT FÜR DIE ANALYSE!\n1. Modell wählen\n2. Datei laden ODER Screenshot per STRG+V\n3. Analyse starten";
+
+        private const string WelcomeText =
+            "👋 BEREIT FÜR DIE ANALYSE!\n" +
+            "1. Modell wählen\n" +
+            "2. Datei laden ODER Screenshot per STRG+V\n" +
+            "3. Analyse starten";
 
         [ObservableProperty] private string _statusMessage = WelcomeText;
         [ObservableProperty] private string _jobDescription = "";
         [ObservableProperty] private ObservableCollection<AiModelInfo> _models = new();
-        [ObservableProperty][NotifyPropertyChangedFor(nameof(ShowVisionHint))] private AiModelInfo? _selectedModelItem;
+        [ObservableProperty] private AiModelInfo? _selectedModelItem;
         [ObservableProperty] private ImageSource? _attachedImageSource;
-        [ObservableProperty][NotifyPropertyChangedFor(nameof(ShowVisionHint))] private bool _hasImage = false;
+        [ObservableProperty] private bool _hasImage = false;
 
-        public bool ShowVisionHint => HasImage && (SelectedModelItem == null || !SelectedModelItem.CanSeeImages);
+        public bool ShowVisionHint =>
+            HasImage && (SelectedModelItem == null || !SelectedModelItem.CanSeeImages);
 
         public MainViewModel()
         {
             _ocrService = new OcrService();
+
             var brushConverter = new BrushConverter();
-
-
-            // --- KI-MODELLE (Liste) ---
 
             Models.Add(new AiModelInfo
             {
@@ -85,7 +104,14 @@ namespace FairRecruitingEngine.ViewModels
             Task.Run(CheckInstalledModels);
         }
 
-        [RelayCommand] private void ResetApp() { JobDescription = ""; AttachedImageSource = null; HasImage = false; StatusMessage = WelcomeText; }
+        [RelayCommand]
+        private void ResetApp()
+        {
+            JobDescription = "";
+            AttachedImageSource = null;
+            HasImage = false;
+            StatusMessage = WelcomeText;
+        }
 
         [RelayCommand]
         private void PasteImage()
@@ -98,7 +124,6 @@ namespace FairRecruitingEngine.ViewModels
                 AttachedImageSource = bitmap;
                 HasImage = true;
 
-                // 🔥 OCR direkt ausführen
                 var extractedText = _ocrService.ExtractTextFromImage(bitmap);
 
                 if (!string.IsNullOrWhiteSpace(extractedText))
@@ -113,10 +138,15 @@ namespace FairRecruitingEngine.ViewModels
         [RelayCommand]
         private void LoadFile()
         {
-            var openFileDialog = new OpenFileDialog { Filter = "Dateien|*.pdf;*.docx;*.txt;*.png;*.jpg;*.jpeg" };
+            var openFileDialog = new OpenFileDialog
+            {
+                Filter = "Dateien|*.pdf;*.docx;*.txt;*.png;*.jpg;*.jpeg"
+            };
+
             if (openFileDialog.ShowDialog() == true)
             {
                 string ext = Path.GetExtension(openFileDialog.FileName).ToLower();
+
                 if (ext == ".png" || ext == ".jpg" || ext == ".jpeg")
                 {
                     AttachedImageSource = new BitmapImage(new Uri(openFileDialog.FileName));
@@ -125,10 +155,15 @@ namespace FairRecruitingEngine.ViewModels
                 else
                 {
                     string text = "";
+
                     if (ext == ".pdf")
                     {
                         using var pdf = PdfDocument.Open(openFileDialog.FileName);
-                        var sb = new StringBuilder(); foreach (var p in pdf.GetPages()) sb.AppendLine(p.Text);
+                        var sb = new StringBuilder();
+
+                        foreach (var p in pdf.GetPages())
+                            sb.AppendLine(p.Text);
+
                         text = sb.ToString();
                     }
                     else if (ext == ".docx")
@@ -136,9 +171,69 @@ namespace FairRecruitingEngine.ViewModels
                         using var doc = WordprocessingDocument.Open(openFileDialog.FileName, false);
                         text = doc.MainDocumentPart?.Document?.Body?.InnerText ?? "";
                     }
-                    else { text = File.ReadAllText(openFileDialog.FileName); }
+                    else
+                    {
+                        text = File.ReadAllText(openFileDialog.FileName);
+                    }
+
                     JobDescription += "\n" + text;
                 }
+            }
+        }
+
+        private string FormatAnalysis(string jsonText)
+        {
+            try
+            {
+                var doc = JsonDocument.Parse(jsonText);
+                var root = doc.RootElement;
+
+                int automation =
+                    root.GetProperty("automation_analysis")
+                        .GetProperty("automation_probability")
+                        .GetInt32();
+
+                int confidence =
+                    root.GetProperty("analysis_confidence")
+                        .GetInt32();
+
+                int discrimination =
+                    root.GetProperty("discrimination_analysis")
+                        .GetProperty("overall_score")
+                        .GetInt32();
+
+                string summary =
+                    root.GetProperty("explanation")
+                        .GetProperty("summary")
+                        .GetString() ?? "Keine Erklärung verfügbar.";
+
+                string recruiterAdvice =
+                    root.GetProperty("recommendation")
+                        .GetProperty("for_recruiter")
+                        .GetString() ?? "Keine Empfehlung verfügbar.";
+
+                return $@"
+=== ANALYSEERGEBNIS ===
+
+Automatisierungs-Wahrscheinlichkeit:
+{automation} %
+
+Analyse-Sicherheit:
+{confidence} %
+
+Diskriminierungs-Gesamtscore:
+{discrimination} %
+
+Erklärung:
+{summary}
+
+Empfehlung für Recruiter:
+{recruiterAdvice}
+";
+            }
+            catch
+            {
+                return "⚠ Analyse konnte nicht korrekt gelesen werden.\n\n" + jsonText;
             }
         }
 
@@ -151,20 +246,43 @@ namespace FairRecruitingEngine.ViewModels
                 return;
             }
 
-            // 🔴 HIER ist der entscheidende Fix
             if (string.IsNullOrWhiteSpace(JobDescription) && !HasImage)
             {
-                StatusMessage = "⚠️ Bitte Text eingeben oder Screenshot einfügen, bevor du die Analyse startest.";
+                StatusMessage = "⚠️ Bitte Text eingeben oder Screenshot einfügen.";
                 return;
             }
 
-            string trimmedInput = JobDescription.Length > 4000
+            string trimmedInput =
+                JobDescription.Length > 4000
                 ? JobDescription.Substring(0, 4000)
                 : JobDescription;
 
-            string finalPrompt = PromptFactory.BuildPrompt(SelectedModelItem.Tag, trimmedInput);
+            string finalPrompt =
+                PromptFactory.BuildPrompt(SelectedModelItem.Tag, trimmedInput);
 
-            StatusMessage = $"⏳ {SelectedModelItem.Name} arbeitet...";
+            int progress = 0;
+
+            var timer = new System.Windows.Threading.DispatcherTimer();
+            timer.Interval = TimeSpan.FromMilliseconds(120);
+
+            timer.Tick += (s, e) =>
+            {
+                if (progress < 90)
+                {
+                    progress += 2;
+
+                    int blocks = progress / 5;
+
+                    string bar =
+                        new string('█', blocks) +
+                        new string('░', 20 - blocks);
+
+                    StatusMessage =
+                        $"🔄 Analyse läuft mit {SelectedModelItem.Name}\n\n{bar} {progress}%";
+                }
+            };
+
+            timer.Start();
 
             try
             {
@@ -173,10 +291,16 @@ namespace FairRecruitingEngine.ViewModels
                     SelectedModelItem.Tag,
                     null);
 
-                StatusMessage = result;
+                timer.Stop();
+
+                string formatted = FormatAnalysis(result);
+
+                StatusMessage =
+                    $"✔ Analyse abgeschlossen\n\n{formatted}";
             }
             catch (Exception ex)
             {
+                timer.Stop();
                 StatusMessage = "❌ Verbindung zu Ollama verloren: " + ex.Message;
             }
         }
@@ -185,9 +309,28 @@ namespace FairRecruitingEngine.ViewModels
         {
             try
             {
-                var process = new Process { StartInfo = new ProcessStartInfo { FileName = "ollama", Arguments = "list", RedirectStandardOutput = true, UseShellExecute = false, CreateNoWindow = true } };
-                process.Start(); string output = await process.StandardOutput.ReadToEndAsync(); process.WaitForExit();
-                Application.Current.Dispatcher.Invoke(() => { foreach (var m in Models) m.IsInstalled = output.Contains(m.Tag); });
+                var process = new Process
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = "ollama",
+                        Arguments = "list",
+                        RedirectStandardOutput = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    }
+                };
+
+                process.Start();
+
+                string output = await process.StandardOutput.ReadToEndAsync();
+                process.WaitForExit();
+
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    foreach (var m in Models)
+                        m.IsInstalled = output.Contains(m.Tag);
+                });
             }
             catch { }
         }

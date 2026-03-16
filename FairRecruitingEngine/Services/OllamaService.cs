@@ -35,58 +35,86 @@ namespace FairRecruitingEngine.Services
                     Stream = true,
                     Options = new RequestOptions
                     {
-                        NumPredict = 300,
-                        Temperature = 0.3f
+                        NumPredict = 1200,
+                        Temperature = 0.2f,
+                        TopP = 0.9f
                     }
                 };
 
                 await foreach (var stream in _client.GenerateAsync(request))
                 {
                     if (stream?.Response != null)
-                    {
                         fullResponse.Append(stream.Response);
-                    }
-
-                    if (stream?.Done == true)
-                        break;
                 }
 
                 var raw = fullResponse.ToString().Trim();
 
+                if (!raw.Contains("}"))
+                {
+                    return "⚠️ KI-Antwort unvollständig:\n\n" + raw;
+                }
+
                 if (string.IsNullOrWhiteSpace(raw))
                     return "⚠️ Modell hat keine Antwort generiert.";
 
-                // Versuchen JSON zu extrahieren
-                var start = raw.IndexOf("{");
-                var end = raw.LastIndexOf("}");
+                // JSON robust extrahieren
+                int start = raw.IndexOf("{");
+                int end = raw.LastIndexOf("}");
 
-                if (start == -1 || end == -1)
+                if (start < 0)
                     return raw;
 
-                var json = raw.Substring(start, end - start + 1);
+                if (end < start)
+                {
+                    return "⚠️ Modell hat unvollständiges JSON geliefert:\n\n" + raw;
+                }
 
-                var result = JsonSerializer.Deserialize<AnalysisResult>(
-                    json,
-                    new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
+                string json = raw.Substring(start, end - start + 1);
+
+                AnalysisResult? result = null;
+
+                try
+                {
+                    result = JsonSerializer.Deserialize<AnalysisResult>(
+                        json,
+                        new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        });
+                }
+                catch
+                {
+                    return raw;
+                }
 
                 if (result == null)
                     return raw;
 
+                var templates =
+                    result.Explanation?.TemplatePatterns != null
+                    ? string.Join(", ", result.Explanation.TemplatePatterns)
+                    : "Keine erkannt";
+
                 return $@"
 === ANALYSEERGEBNIS ===
 
-Risikolevel: {result.RiskLevel}
-Automation-Wahrscheinlichkeit: {result.AutomationProbability}%
-Confidence: {result.ConfidenceScore}
+Automatisierungs-Wahrscheinlichkeit:
+{result.AutomationAnalysis?.AutomationProbability ?? 0} %
+
+Analyse-Sicherheit:
+{result.AnalysisConfidence} %
+
+Diskriminierungs-Gesamtscore:
+{result.DiscriminationAnalysis?.OverallScore ?? 0} %
 
 Erklärung:
-{result.Explanation}
+{result.Explanation?.Summary ?? "Keine Erklärung verfügbar."}
 
-Empfehlung:
-{result.Recommendation}
+Erkannte Template-Muster:
+{templates}
+
+Empfehlung für Recruiter:
+{result.Recommendation?.ForRecruiter ?? "Keine Empfehlung."}
 ";
             }
             catch (Exception ex)

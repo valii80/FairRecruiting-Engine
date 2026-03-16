@@ -10,12 +10,30 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Images\DE.png" />
+    <None Remove="Images\EN.png" />
+    <None Remove="Images\ES.png" />
+    <None Remove="Images\FR.png" />
+    <None Remove="Images\IT.png" />
+    <None Remove="Images\RO.png" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="DocumentFormat.OpenXml" Version="3.4.1" />
     <PackageReference Include="MaterialDesignThemes" Version="5.3.0" />
     <PackageReference Include="OllamaSharp" Version="5.4.18" />
     <PackageReference Include="PdfPig" Version="0.1.13" />
     <PackageReference Include="Tesseract" Version="5.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Images\DE.png" />
+    <Resource Include="Images\EN.png" />
+    <Resource Include="Images\ES.png" />
+    <Resource Include="Images\FR.png" />
+    <Resource Include="Images\IT.png" />
+    <Resource Include="Images\RO.png" />
   </ItemGroup>
 
 </Project>

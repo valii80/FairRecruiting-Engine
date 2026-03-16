@@ -27,7 +27,7 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="20"/>
+                <ColumnDefinition Width="200"/>
                 <ColumnDefinition Width="360"/>
             </Grid.ColumnDefinitions>
 
@@ -35,11 +35,11 @@
             <StackPanel Grid.Column="0" VerticalAlignment="Center">
                 <TextBlock Text="Fair Recruiting Engine"
                            Foreground="White"
-                           FontSize="32"
+                           FontSize="34"
                            FontWeight="Bold"/>
                 <TextBlock Text="Lokale KI-Analyse für faires Recruiting"
                            Foreground="#AB8DFF"
-                           FontSize="14"
+                           FontSize="20"
                            FontWeight="SemiBold"/>
             </StackPanel>
 
@@ -54,6 +54,74 @@
                     FontWeight="Bold"
                     BorderBrush="#444444"
                     VerticalAlignment="Bottom"/>
+
+            <!-- SPRACHAUSWAHL -->
+            <ComboBox Grid.Column="2"
+          x:Name="LanguageSelector"
+          Width="100"
+          Height="42"
+          Margin="80,0,0,0"
+          VerticalAlignment="Bottom"
+          Background="#1E1E1E"
+          Foreground="White"
+          BorderBrush="#AB8DFF"
+          SelectionChanged="LanguageSelector_SelectionChanged"
+          Loaded="LanguageSelector_Loaded">
+
+                <ComboBoxItem>
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="/Images/DE.png"
+               Width="20"
+               Height="14"/>
+                        <TextBlock Text="Deutsch" Margin="6,0,0,0"/>
+                    </StackPanel>
+                </ComboBoxItem>
+                
+                <ComboBoxItem>
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="/Images/EN.png"
+              Width="20"
+              Height="14"/>
+                        <TextBlock Text="English" Margin="6,0,0,0"/>
+                    </StackPanel>
+                </ComboBoxItem>
+
+                <ComboBoxItem>
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="/Images/FR.png"
+              Width="20"
+              Height="14"/>
+                        <TextBlock Text="Français" Margin="6,0,0,0"/>
+                    </StackPanel>
+                </ComboBoxItem>
+
+                <ComboBoxItem>
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="/Images/ES.png"
+              Width="20"
+              Height="14"/>
+                        <TextBlock Text="Español" Margin="6,0,0,0"/>
+                    </StackPanel>
+                </ComboBoxItem>
+
+                <ComboBoxItem>
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="/Images/IT.png"
+              Width="20"
+              Height="14"/>        
+                        <TextBlock Text="Italiano" Margin="6,0,0,0"/>
+                    </StackPanel>
+                </ComboBoxItem>
+
+                <ComboBoxItem>
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="/Images/RO.png"
+              Width="20"
+              Height="14"/>
+                        <TextBlock Text="Română" Margin="6,0,0,0"/>
+                    </StackPanel>
+                </ComboBoxItem>
+            </ComboBox>
 
             <!-- Modell Auswahl -->
             <StackPanel Grid.Column="3"
@@ -141,19 +209,16 @@
 
                 <Grid>
 
-                    <!-- Platzhalter -->
                     <TextBlock Text="SCREENSHOT BEREICH"
                                Foreground="Gray"
                                FontSize="16"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"/>
 
-                    <!-- Bild -->
                     <Image Source="{Binding AttachedImageSource}"
                            Stretch="Uniform"
                            Margin="10"/>
 
-                    <!-- Aktiver Screenshot Badge -->
                     <Border VerticalAlignment="Top"
                             HorizontalAlignment="Right"
                             Background="#AB8DFF"
@@ -166,7 +231,6 @@
                                    FontWeight="Bold"/>
                     </Border>
 
-                    <!-- Bildanalyse Hinweis (IMMER sichtbar für Test) -->
                     <StackPanel VerticalAlignment="Bottom"
                                 HorizontalAlignment="Center"
                                 Margin="0,0,0,12">
